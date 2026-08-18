@@ -4,7 +4,7 @@
     {
       "name": "halal-portfolio-screener",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "halal-portfolio-screener"],
+      "runtimeArgs": ["run", "dev"],
       "port": 3100
     }
   ]
