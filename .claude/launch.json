@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "halal-portfolio-screener",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "halal-portfolio-screener"],
+      "port": 3100
+    }
+  ]
+}
