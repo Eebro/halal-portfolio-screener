@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0d1117;
+  --color-surface: #ffffff;
+  --color-muted: #5b6472;
+  --color-line: #e3e7ed;
+  --color-compliant: #1a7f4b;
+  --color-compliant-bg: #e8f6ee;
+  --color-noncompliant: #a4193d;
+  --color-noncompliant-bg: #fbeaee;
+  --color-review: #8a5410;
+  --color-review-bg: #fdf1e0;
+  --color-neutral-chip: #4b5563;
+  --color-neutral-chip-bg: #f1f3f6;
+}
+
+html,
+body {
+  background: #f7f8fa;
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numeric columns line up only with tabular figures. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}

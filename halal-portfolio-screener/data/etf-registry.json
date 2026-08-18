@@ -1,0 +1,89 @@
+{
+  "builtAt": "2026-08-18T18:21:45.180Z",
+  "sources": [
+    "https://www.sp-funds.com/purification-calculator/"
+  ],
+  "warnings": [],
+  "entries": [
+    {
+      "ticker": "SPUS",
+      "name": "SP Funds S&P 500 Sharia Industry Exclusions ETF",
+      "provider": "SP Funds",
+      "shariahCompliant": true,
+      "purificationRatePct": 1.81,
+      "ratePeriod": "Q1 2026",
+      "note": null,
+      "sourceUrl": "https://www.sp-funds.com/purification-calculator/"
+    },
+    {
+      "ticker": "SPWO",
+      "name": "SP Funds S&P World (ex-US) ETF",
+      "provider": "SP Funds",
+      "shariahCompliant": true,
+      "purificationRatePct": 1.55,
+      "ratePeriod": "Q1 2026",
+      "note": null,
+      "sourceUrl": "https://www.sp-funds.com/purification-calculator/"
+    },
+    {
+      "ticker": "SPTE",
+      "name": "SP Funds S&P Global Technology ETF",
+      "provider": "SP Funds",
+      "shariahCompliant": true,
+      "purificationRatePct": 2.27,
+      "ratePeriod": "Q1 2026",
+      "note": null,
+      "sourceUrl": "https://www.sp-funds.com/purification-calculator/"
+    },
+    {
+      "ticker": "SPRE",
+      "name": "SP Funds S&P Global REIT Sharia ETF",
+      "provider": "SP Funds",
+      "shariahCompliant": true,
+      "purificationRatePct": 0.52,
+      "ratePeriod": "Q1 2026",
+      "note": null,
+      "sourceUrl": "https://www.sp-funds.com/purification-calculator/"
+    },
+    {
+      "ticker": "SPSK",
+      "name": "SP Funds Dow Jones Global Sukuk ETF",
+      "provider": "SP Funds",
+      "shariahCompliant": true,
+      "purificationRatePct": 0,
+      "ratePeriod": null,
+      "note": "No purification required — sukuk are Shariah-compliant by definition.",
+      "sourceUrl": "https://www.sp-funds.com/purification-calculator/"
+    },
+    {
+      "ticker": "WSHR",
+      "name": "Wealthsimple Shariah World Equity Index ETF",
+      "provider": "Wealthsimple",
+      "shariahCompliant": true,
+      "purificationRatePct": null,
+      "ratePeriod": null,
+      "note": "Shariah-compliant by mandate. Wealthsimple publishes purification guidance separately — enter the rate manually if you have it.",
+      "sourceUrl": "https://www.wealthsimple.com/en-ca/product/shariah-etf"
+    },
+    {
+      "ticker": "HLAL",
+      "name": "Wahed FTSE USA Shariah ETF",
+      "provider": "Wahed",
+      "shariahCompliant": true,
+      "purificationRatePct": null,
+      "ratePeriod": null,
+      "note": "Shariah-compliant by mandate. Wahed publishes purification rates on its fund page.",
+      "sourceUrl": "https://funds.wahedinvest.com/hlal"
+    },
+    {
+      "ticker": "UMMA",
+      "name": "Wahed Dow Jones Islamic World ETF",
+      "provider": "Wahed",
+      "shariahCompliant": true,
+      "purificationRatePct": null,
+      "ratePeriod": null,
+      "note": "Shariah-compliant by mandate. Wahed publishes purification rates on its fund page.",
+      "sourceUrl": "https://funds.wahedinvest.com/umma"
+    }
+  ]
+}
