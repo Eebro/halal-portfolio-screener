@@ -87,9 +87,11 @@ Link rot is guarded by `tests/sources.test.ts`. Structural checks run offline; v
 CHECK_LINKS=1 npx vitest run tests/sources.test.ts
 ```
 
-## Connecting a brokerage (optional)
+## Connecting a brokerage (optional, self-hosted only)
 
-Wealthsimple has no public API. [SnapTrade](https://snaptrade.com) covers both Wealthsimple and Questrade on a free Personal tier.
+Wealthsimple has no public API. [SnapTrade](https://snaptrade.com) covers both Wealthsimple and Questrade, and its free **Personal** tier is what this app uses.
+
+**This only works for whoever is running the app** — there is no way to make it work for arbitrary site visitors on the free tier. SnapTrade's own [Developer Terms of Use](https://snaptrade.com/developer-terms-of-use) describe the free tier as "a single Connected User with up to five (5) brokerage connections" — that's five of *your own* accounts, not five different people. Supporting other people connecting their own brokerage requires SnapTrade's paid Commercial tier (per-visitor identity, a credit card on file, $2/connected-user/month past the free Starter allotment) — out of scope here. If you want your own working "Connect Wealthsimple" button, **clone this repo and run it with your own SnapTrade key**:
 
 1. Create a Personal account at [snaptrade.com](https://snaptrade.com) and verify your email.
 2. Generate a Personal API key in the dashboard.
@@ -100,11 +102,25 @@ SNAPTRADE_CLIENT_ID=your_client_id
 SNAPTRADE_CONSUMER_KEY=your_consumer_key
 ```
 
-The brokerage option only appears in the UI once these are set.
+The brokerage option only appears in the UI once these are set — CSV upload works either way and needs no setup, which is why it's the default path for anyone visiting a shared deployment of this app.
 
-> **The free Personal tier is scoped to your own accounts.** Other people cannot connect theirs, which is why CSV upload is a first-class path rather than a fallback — it is what makes the app demoable to anyone.
+### A note on the integration code
 
-The SnapTrade network calls are **untested** (they need live credentials); the payload-normalization layer is unit-tested.
+The `lib/holdings/snaptrade.ts` mapping was rewritten against the installed SDK's actual generated types (`node_modules/snaptrade-typescript-sdk`, v12.1.3) rather than its README, which only documents the Commercial flow. Four things the SDK's own type definitions get right that an earlier pass at this file got wrong, worth knowing if you touch this file again:
+
+- **`units`/`price` on a position are strings** (`"58.375"`), not numbers — a naive `typeof v === "number"` guard silently turns every quantity and price into `0`.
+- **The real method is `getAllAccountPositions`**, not `getUserAccountPositions` (which doesn't exist on this client at all and would throw immediately).
+- **It returns `{ results: [...] }`**, not a bare array — assuming an array here silently skips every account instead of throwing.
+- **`position.instrument` is flat** (`symbol`, `raw_symbol`, `currency`, `exchange`, `kind`) — there is no nested `symbol.symbol` object and no `exchange.mic_code`.
+
+None of these would be caught by TypeScript, since the SnapTrade client is typed as `any` at the call boundary (deliberately, per the file's own comment — the SDK's conditional auth-mode types are otherwise unworkable without live credentials to test against). That's exactly why they went unnoticed: the code looked plausible, compiled cleanly, and always silently returned zero holdings instead of erroring.
+
+**This has since been verified end-to-end against a real connected Wealthsimple account** — 54 positions across 5 accounts (TFSA, FHSA, Personal, RRSP, Crypto), ~$205K CAD, correct quantities/prices/currencies, flowing through the full scan pipeline via the actual UI button, not just a script. That run surfaced two more real gaps, now fixed:
+
+- **Physically-backed gold reports `kind: "other"`** — SnapTrade's catch-all bucket, not a dedicated precious-metal kind. Since "other" also covers genuinely unclassifiable instruments, `kind` alone can't tell gold apart from anything else in that bucket; the instrument's `exchange` field (`"WST-PRECIOUS-METAL"`) is the only reliable signal, and `toSecurityType` now checks it.
+- **SnapTrade emits `.VN` for TSX Venture tickers** (e.g. `"FFU.VN"`, `"PNG.VN"`) — a suffix `lib/screener/resolve.ts`'s `normalizeTicker` didn't strip, distinct from the `.V` form used elsewhere in the index. Both stocks are genuinely in the screener index; the missing suffix handling was silently reporting them `UNRESOLVED`.
+
+The unit tests for the mapping layer (`tests/snaptrade.test.ts`) use fixture shapes taken directly from the SDK's `.d.ts`, including the real (rounded) gold and BTC payloads from the account used to verify this. The live network calls (`fetchHoldings`, `createConnectionLink`) are exercised by `scripts/snaptrade-smoke.ts` against a real account rather than by the automated test suite — run `npx tsx scripts/snaptrade-smoke.ts` with your own credentials in `.env.local` to reproduce.
 
 ## Commands
 
@@ -114,7 +130,8 @@ The SnapTrade network calls are **untested** (they need live credentials); the p
 | `npm run build:index` | Rebuild the ticker index (~1 min). Re-run quarterly. |
 | `npm run build:etfs` | Refresh ETF purification rates |
 | `npm run fixtures` | Re-download golden fixture pages |
-| `npm test` | Full suite (128 tests) |
+| `npm test` | Full suite (147 tests) |
+| `npx tsx scripts/snaptrade-smoke.ts` | Live end-to-end scan against your real SnapTrade-connected brokerage |
 | `CHECK_LINKS=1 npx vitest run tests/sources.test.ts` | Verify cited sources still resolve |
 | `npx tsx scripts/smoke.ts` | Live end-to-end scan against the sample CSV |
 

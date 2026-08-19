@@ -22,6 +22,17 @@ describe("normalizeTicker", () => {
     expect(normalizeTicker("SHOP.TO")).toBe("SHOP");
     expect(normalizeTicker("RPR_u")).toBe("RPR");
   });
+
+  it("strips SnapTrade's .VN suffix for TSX Venture, distinct from the index's own .V form", () => {
+    // Confirmed against a real connected Wealthsimple account: SnapTrade
+    // reports F4 Uranium as "FFU.VN" and Kraken Robotics as "PNG.VN". The
+    // index itself uses a bare ".V" for the same exchange (e.g. "FFU.V").
+    // Missing .VN silently produced UNRESOLVED for two holdings that are
+    // genuinely in the screener index.
+    expect(normalizeTicker("FFU.VN")).toBe("FFU");
+    expect(normalizeTicker("PNG.VN")).toBe("PNG");
+    expect(normalizeTicker("FFU.V")).toBe("FFU");
+  });
 });
 
 describe("nameSimilarity", () => {
@@ -120,6 +131,22 @@ describe("suffix inconsistency within one export", () => {
   ])("resolves %s despite suffix form", (symbol, name) => {
     const out = resolver.resolve({ symbol, name, mic: "XTSE", exchange: "TSX" });
     expect(out.kind).toBe("resolved");
+  });
+});
+
+describe("SnapTrade's .VN suffix (TSX Venture)", () => {
+  it("resolves PNG.VN (Kraken Robotics), which was silently UNRESOLVED before the .VN fix", () => {
+    // This exact symbol form came back from a real connected Wealthsimple
+    // account via SnapTrade. Before normalizeTicker handled .VN, this
+    // reported UNRESOLVED for a stock that is genuinely in the index.
+    const out = resolver.resolve({
+      symbol: "PNG.VN",
+      name: "Kraken Robotics Inc.",
+      mic: "XTSX",
+      exchange: "TSX-V",
+    });
+    expect(out.kind).toBe("resolved");
+    if (out.kind === "resolved") expect(out.entry.n).toMatch(/Kraken/i);
   });
 });
 

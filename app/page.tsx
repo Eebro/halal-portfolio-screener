@@ -5,6 +5,7 @@ import { SummaryCards } from "@/components/SummaryCards";
 import { PortfolioSummary } from "@/components/PortfolioSummary";
 import { PurificationGuide } from "@/components/PurificationGuide";
 import { HoldingsTable } from "@/components/HoldingsTable";
+import { ZakatCalculator } from "@/components/ZakatCalculator";
 import type { ScreenedHolding } from "@/lib/types";
 import type { ScanSummary } from "@/lib/scan";
 
@@ -257,6 +258,8 @@ export default function Page() {
           <PortfolioSummary summary={result.summary} />
 
           <SummaryCards summary={result.summary} fx={result.fx} showCad={showCad} />
+
+          <ZakatCalculator holdings={result.holdings} usdToCad={result.fx?.usdToCad ?? null} />
 
           {result.warnings.length > 0 && (
             <div className="rounded-xl border border-[var(--color-review)] bg-[var(--color-review-bg)] p-4">

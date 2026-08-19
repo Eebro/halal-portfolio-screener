@@ -6,6 +6,7 @@ import { getResolver, normalizeTicker } from "@/lib/screener/resolve";
 import { fetchMany } from "@/lib/screener/detail";
 import { routeHolding, countsTowardComplianceRatio } from "@/lib/assetRouter";
 import { computePurification, totalPurification } from "@/lib/purification";
+import { marketValueCad } from "@/lib/currency";
 import type {
   ComplianceStatus,
   EtfEntry,
@@ -14,6 +15,8 @@ import type {
   ScreenResult,
 } from "@/lib/types";
 import etfRegistry from "@/data/etf-registry.json";
+
+export { marketValueCad };
 
 const ETFS = new Map<string, EtfEntry>(
   (etfRegistry.entries as EtfEntry[]).map((e) => [e.ticker.toUpperCase(), e]),
@@ -51,22 +54,6 @@ export interface ScanSummary {
    */
   valuesFxNormalized: boolean;
   purification: ReturnType<typeof totalPurification>;
-}
-
-/**
- * Market values arrive in whichever currency the position trades in — a real
- * export mixes CAD and USD rows freely. Summing them raw would overstate the
- * CAD share of the portfolio and skew the compliance percentage, so everything
- * is normalized to CAD before aggregation.
- */
-function marketValueCad(holding: Holding, usdToCad: number | null): number {
-  const value = Math.abs(holding.marketValue);
-  const currency = (holding.marketValueCurrency || "CAD").toUpperCase();
-  if (currency === "CAD") return value;
-  if (currency === "USD" && usdToCad) return value * usdToCad;
-  // Unknown currency with no rate: fall back to the CAD book value if the
-  // broker gave us one, otherwise count at face value and flag it upstream.
-  return holding.bookValueCad !== null ? Math.abs(holding.bookValueCad) : value;
 }
 
 export interface ScanOutput {

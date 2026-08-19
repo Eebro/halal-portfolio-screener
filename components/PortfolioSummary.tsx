@@ -62,7 +62,14 @@ export function PortfolioSummary({ summary }: { summary: ScanSummary }) {
           <div className="mt-2 space-y-1.5">
             {topAccounts.map((a) => (
               <div key={a.name} className="flex items-center gap-3">
-                <div className="w-32 shrink-0 truncate text-sm">{a.name}</div>
+                {/* SnapTrade account names ("Wealthsimple Trade PERSONAL")
+                    run longer than the CSV path's short labels ("TFSA") —
+                    confirmed against a real connected account. Widened from
+                    w-32 and given a title so the full name is still reachable
+                    when it truncates. */}
+                <div className="w-40 shrink-0 truncate text-sm" title={a.name}>
+                  {a.name}
+                </div>
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--color-neutral-chip-bg)]">
                   <div
                     className="h-full rounded-full bg-[var(--color-compliant)]"

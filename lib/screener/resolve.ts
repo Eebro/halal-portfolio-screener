@@ -69,7 +69,12 @@ export function normalizeTicker(raw: string): string {
   return raw
     .trim()
     .toUpperCase()
-    .replace(/\.(TO|TSX|V|NE|CN|U)$/i, "")
+    // .VN is SnapTrade's TSX Venture suffix (confirmed against a real
+    // connected account: F4 Uranium comes back as "FFU.VN", Kraken Robotics
+    // as "PNG.VN"), distinct from the index's own ".V" form for the same
+    // exchange (e.g. "FFU.V"). Missing this silently produced two
+    // UNRESOLVED holdings that are actually in the screener index.
+    .replace(/\.(TO|TSX|VN|V|NE|CN|U)$/i, "")
     .replace(/[_.]U$/i, "")
     .trim();
 }
