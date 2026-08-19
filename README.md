@@ -115,8 +115,6 @@ The `lib/holdings/snaptrade.ts` mapping was rewritten against the installed SDK'
 
 None of these would be caught by TypeScript, since the SnapTrade client is typed as `any` at the call boundary (deliberately, per the file's own comment — the SDK's conditional auth-mode types are otherwise unworkable without live credentials to test against). That's exactly why they went unnoticed: the code looked plausible, compiled cleanly, and always silently returned zero holdings instead of erroring.
 
-**This has since been verified end-to-end against a real connected Wealthsimple account** — 54 positions across 5 accounts (TFSA, FHSA, Personal, RRSP, Crypto), ~$205K CAD, correct quantities/prices/currencies, flowing through the full scan pipeline via the actual UI button, not just a script. That run surfaced two more real gaps, now fixed:
-
 - **Physically-backed gold reports `kind: "other"`** — SnapTrade's catch-all bucket, not a dedicated precious-metal kind. Since "other" also covers genuinely unclassifiable instruments, `kind` alone can't tell gold apart from anything else in that bucket; the instrument's `exchange` field (`"WST-PRECIOUS-METAL"`) is the only reliable signal, and `toSecurityType` now checks it.
 - **SnapTrade emits `.VN` for TSX Venture tickers** (e.g. `"FFU.VN"`, `"PNG.VN"`) — a suffix `lib/screener/resolve.ts`'s `normalizeTicker` didn't strip, distinct from the `.V` form used elsewhere in the index. Both stocks are genuinely in the screener index; the missing suffix handling was silently reporting them `UNRESOLVED`.
 
