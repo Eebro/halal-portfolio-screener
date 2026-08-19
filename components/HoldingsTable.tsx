@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from "react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { groupHoldings, type GroupedHolding } from "@/lib/group";
-import type { ScreenedHolding } from "@/lib/types";
+import type { MethodologyRatios, RatioPass, ScreenedHolding } from "@/lib/types";
 
 type SortKey = "value" | "purification" | "impure" | "symbol" | "status";
 
@@ -322,8 +322,18 @@ function GroupDetail({
       <div>
         {g.screen && g.screen.ratios.length > 0 && (
           <>
-            <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-              Screening ratios by methodology
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                Screening ratios by methodology
+              </div>
+              <div className="flex items-center gap-3 text-[11px] text-[var(--color-muted)]">
+                <span className="inline-flex items-center gap-1">
+                  <span className="text-[var(--color-noncompliant)]">✗</span> fails threshold
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="text-[var(--color-compliant)]">✓</span> passes
+                </span>
+              </div>
             </div>
             <table className="mt-1.5 w-full text-xs">
               <thead>
@@ -332,20 +342,12 @@ function GroupDetail({
                   <th className="py-1 text-right font-medium">Debt</th>
                   <th className="py-1 text-right font-medium">Non-compliant assets</th>
                   <th className="py-1 text-right font-medium">Impure income</th>
+                  <th className="py-1 pl-3 text-left font-medium">Result</th>
                 </tr>
               </thead>
               <tbody className="tnum">
                 {g.screen.ratios.map((r) => (
-                  <tr key={r.methodology} className="border-t border-[var(--color-line)]">
-                    <td className="py-1">{r.methodology}</td>
-                    <td className="py-1 text-right">{r.debtPct === null ? "—" : `${r.debtPct}%`}</td>
-                    <td className="py-1 text-right">
-                      {r.nonCompliantAssetsPct === null ? "—" : `${r.nonCompliantAssetsPct}%`}
-                    </td>
-                    <td className="py-1 text-right">
-                      {r.impureIncomePct === null ? "—" : `${r.impureIncomePct}%`}
-                    </td>
-                  </tr>
+                  <RatioRow key={r.methodology} ratio={r} />
                 ))}
               </tbody>
             </table>
@@ -394,6 +396,95 @@ function GroupDetail({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Labels the ratio a cell's pass/fail mark refers to, for a readable title. */
+const RATIO_CELL_LABEL: Record<"debt" | "nonCompliantAssets" | "impureIncome", string> = {
+  debt: "Debt ratio",
+  nonCompliantAssets: "Non-compliant assets ratio",
+  impureIncome: "Impure income ratio",
+};
+
+/**
+ * One ratio value with its pass/fail mark, colored so a failing number is
+ * immediately visible rather than requiring a mental comparison against the
+ * rulebook thresholds shown in the prose below the table.
+ */
+function RatioCell({
+  pct,
+  pass: rawPass,
+  metric,
+}: {
+  pct: number | null;
+  pass: RatioPass;
+  metric: keyof typeof RATIO_CELL_LABEL;
+}) {
+  // Normalize anything that isn't strictly true/false to "unknown" rather than
+  // letting a falsy-but-not-false value (e.g. undefined from a stale cache
+  // entry predating this field) render as a false failure mark.
+  const pass: RatioPass = rawPass === true ? true : rawPass === false ? false : null;
+
+  if (pct === null && pass === null) {
+    return <td className="py-1 text-right text-[var(--color-muted)]">—</td>;
+  }
+
+  const label = RATIO_CELL_LABEL[metric];
+  const colorClass =
+    pass === false
+      ? "text-[var(--color-noncompliant)] font-semibold"
+      : pass === true
+        ? "text-[var(--color-compliant)]"
+        : "text-[var(--color-ink)]";
+
+  return (
+    <td
+      className={`py-1 text-right ${colorClass}`}
+      title={
+        pass === false
+          ? `${label} fails this standard's threshold.`
+          : pass === true
+            ? `${label} passes this standard's threshold.`
+            : `${label} was not separately assessed for this stock.`
+      }
+    >
+      {pct === null ? "—" : `${pct}%`}
+      {pass !== null && <span className="ml-1">{pass ? "✓" : "✗"}</span>}
+    </td>
+  );
+}
+
+/** One methodology's row, tinted when it fails and naming what failed. */
+function RatioRow({ ratio: r }: { ratio: MethodologyRatios }) {
+  const failing: string[] = [];
+  if (r.debtPass === false) failing.push("Debt");
+  if (r.nonCompliantAssetsPass === false) failing.push("Non-compliant assets");
+  if (r.impureIncomePass === false) failing.push("Impure income");
+
+  const rowFails = failing.length > 0;
+
+  return (
+    <tr
+      className={`border-t border-[var(--color-line)] ${
+        rowFails ? "bg-[var(--color-noncompliant-bg)]" : ""
+      }`}
+    >
+      <td className="py-1 font-medium">{r.methodology}</td>
+      <RatioCell pct={r.debtPct} pass={r.debtPass} metric="debt" />
+      <RatioCell
+        pct={r.nonCompliantAssetsPct}
+        pass={r.nonCompliantAssetsPass}
+        metric="nonCompliantAssets"
+      />
+      <RatioCell pct={r.impureIncomePct} pass={r.impureIncomePass} metric="impureIncome" />
+      <td className="py-1 pl-3 text-left">
+        {rowFails ? (
+          <span className="text-[var(--color-noncompliant)]">Fails on {failing.join(", ")}</span>
+        ) : (
+          <span className="text-[var(--color-compliant)]">Passes</span>
+        )}
+      </td>
+    </tr>
   );
 }
 

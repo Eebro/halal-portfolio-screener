@@ -57,13 +57,26 @@ export type ComplianceStatus =
   /** Known asset class but no vetted data — e.g. an ETF not in the registry. */
   | "NEEDS_REVIEW";
 
+/**
+ * Whether a single ratio (e.g. debt, or impure income) passed the threshold
+ * for its standard. The source renders this as a ✓/✗ mark next to each row —
+ * previously discarded during parsing, which was the actual bug: a reader had
+ * to mentally compare the percentage against the prose threshold below the
+ * table to figure out what failed. `null` means the source showed neither
+ * mark (should not happen in practice, but parsing must not assume).
+ */
+export type RatioPass = boolean | null;
+
 /** One row of the five-methodology ratio table on a detail page. */
 export interface MethodologyRatios {
   methodology: "AAOIFI" | "S&P" | "DJIM" | "FTSE" | "MSCI";
   /** Interest-bearing debt ratio. Denominator varies by methodology. */
   debtPct: number | null;
+  debtPass: RatioPass;
   nonCompliantAssetsPct: number | null;
+  nonCompliantAssetsPass: RatioPass;
   impureIncomePct: number | null;
+  impureIncomePass: RatioPass;
 }
 
 /** Parsed result of a single stock detail page. */

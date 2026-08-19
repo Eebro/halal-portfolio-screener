@@ -8,7 +8,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseDetailPage, parsePct, parseMoney, textNodes } from "@/lib/screener/parse";
+import { parseDetailPage, parsePct, parseMoney, parsePassMark, textNodes } from "@/lib/screener/parse";
 
 const fixture = (name: string) =>
   readFileSync(join(process.cwd(), "data", "fixtures", `${name}.html`), "utf8");
@@ -33,6 +33,16 @@ describe("scalar parsers", () => {
   it("ignores checkmarks where a percentage was expected", () => {
     expect(parsePct("✓")).toBeNull();
     expect(parsePct("✗")).toBeNull();
+  });
+
+  it("reads the pass/fail mark next to each ratio", () => {
+    expect(parsePassMark("✓")).toBe(true);
+    expect(parsePassMark("✗")).toBe(false);
+    // A dash means the source did not assess this ratio for this stock —
+    // must not be coerced to pass or fail.
+    expect(parsePassMark("-")).toBeNull();
+    expect(parsePassMark(undefined)).toBeNull();
+    expect(parsePassMark("12.3%")).toBeNull();
   });
 });
 
@@ -70,6 +80,25 @@ describe("AAPL — compliant, full ratio set", () => {
     expect(by["DJIM"].debtPct).toBe(2.35);
     expect(by["FTSE"].debtPct).toBe(22.83);
     expect(by["MSCI"].debtPct).toBe(22.83);
+  });
+
+  it("marks every scored ratio as passing for a fully compliant stock", () => {
+    // The source renders a ✓/✗ mark next to each ratio row. Previously this
+    // was parsed and discarded, which is exactly the gap that made the
+    // breakdown table ambiguous — you had to compare the percentage against
+    // the rulebook prose by eye to know what passed.
+    for (const r2 of r.ratios) {
+      expect(r2.debtPass).toBe(true);
+      expect(r2.impureIncomePass).toBe(true);
+      // S&P and DJIM don't score a non-compliant-assets ratio at all (their
+      // rulebooks only mention debt and impure income) — null there is
+      // correct, not a gap. AAOIFI/FTSE/MSCI do score it and must be true.
+      if (["AAOIFI", "FTSE", "MSCI"].includes(r2.methodology)) {
+        expect(r2.nonCompliantAssetsPass).toBe(true);
+      } else {
+        expect(r2.nonCompliantAssetsPass).toBeNull();
+      }
+    }
   });
 
   it("captures the impure income breakdown and source date", () => {
@@ -147,6 +176,29 @@ describe("JPM — non-compliant, sparse ratio rows", () => {
     const ftse = r.ratios.find((x) => x.methodology === "FTSE")!;
     expect(ftse.debtPct).toBe(25.17);
     expect(ftse.nonCompliantAssetsPct).toBe(0); // FTSE reports "Cash"
+  });
+
+  it("marks the actual failing ratio, not just the overall verdict", () => {
+    // JPMorgan's AAOIFI debt ratio is 100% — the ratio that actually fails
+    // the standard. This is the single most important signal for the "which
+    // standard is violated" question: it must read false, not null or true.
+    const aaoifi = r.ratios.find((x) => x.methodology === "AAOIFI")!;
+    expect(aaoifi.debtPass).toBe(false);
+  });
+
+  it("does not claim pass or fail on ratios the source only shows a dash for", () => {
+    // JPMorgan's AAOIFI "Impure Income" row is 0.00% with a dash, not a mark
+    // — the source doesn't assess it once the debt ratio alone disqualifies
+    // the stock. This must be null, never coerced to true or false.
+    const aaoifi = r.ratios.find((x) => x.methodology === "AAOIFI")!;
+    expect(aaoifi.impureIncomePass).toBeNull();
+  });
+
+  it("still reads a real pass mark elsewhere on a non-compliant page", () => {
+    // FTSE's debt ratio for JPMorgan (25.17%) genuinely passes FTSE's
+    // total-assets-based threshold, even though the stock overall fails.
+    const ftse = r.ratios.find((x) => x.methodology === "FTSE")!;
+    expect(ftse.debtPass).toBe(true);
   });
 });
 

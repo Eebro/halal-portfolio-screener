@@ -18,7 +18,7 @@
  *     FTSE/MSCI have "Cash" and "Cash & AR" instead), so blocks are delimited
  *     by their "... Rulebook:" marker rather than assumed to be uniform
  */
-import type { MethodologyRatios, ScreenResult } from "@/lib/types";
+import type { MethodologyRatios, RatioPass, ScreenResult } from "@/lib/types";
 
 const ENTITIES: [RegExp, string][] = [
   [/&#8211;|&#8212;|&ndash;|&mdash;/g, "-"],
@@ -62,6 +62,13 @@ export function parseMoney(v: string | undefined): number | null {
   return Number(m[1].replace(/,/g, ""));
 }
 
+/** "✓" -> true ; "✗" -> false ; anything else -> null. */
+export function parsePassMark(v: string | undefined): RatioPass {
+  if (v === "✓") return true;
+  if (v === "✗") return false;
+  return null;
+}
+
 const RULEBOOKS: { marker: RegExp; methodology: MethodologyRatios["methodology"] }[] = [
   { marker: /^AAOIFI Rulebook:/i, methodology: "AAOIFI" },
   { marker: /^S&P Sharia Rulebook:/i, methodology: "S&P" },
@@ -71,6 +78,23 @@ const RULEBOOKS: { marker: RegExp; methodology: MethodologyRatios["methodology"]
 ];
 
 const RATIO_LABELS = new Set(["Debt", "Non-Compliant Assets", "Impure Income", "Cash", "Cash & AR"]);
+
+/**
+ * Each ratio row renders as `label, [percentage], mark` where mark is a ✓/✗
+ * immediately after the percentage — or immediately after the label when
+ * there is no percentage to show (JPMorgan's AAOIFI "Non-Compliant Assets"
+ * has no value, just a mark). This reads whichever shape is present rather
+ * than assuming a fixed offset.
+ */
+function readRatioRow(block: string[], labelIdx: number): { pct: number | null; pass: RatioPass } {
+  const afterLabel = block[labelIdx + 1];
+  const pct = parsePct(afterLabel);
+  if (pct !== null) {
+    return { pct, pass: parsePassMark(block[labelIdx + 2]) };
+  }
+  // No percentage: the mark (if any) sits directly after the label.
+  return { pct: null, pass: parsePassMark(afterLabel) };
+}
 
 /**
  * Each methodology's rows appear BEFORE its "... Rulebook:" marker. We walk
@@ -85,21 +109,24 @@ function parseRatioBlocks(nodes: string[]): MethodologyRatios[] {
     if (markerIdx === -1) continue;
 
     const block = nodes.slice(searchFrom, markerIdx);
-    const values: Record<string, number | null> = {};
+    const values: Record<string, { pct: number | null; pass: RatioPass }> = {};
     for (let i = 0; i < block.length; i++) {
       const label = block[i];
       if (!RATIO_LABELS.has(label)) continue;
-      // The next node is the percentage *if* it looks like one. A row can be
-      // label -> checkmark with no value at all.
-      values[label] = parsePct(block[i + 1]);
+      values[label] = readRatioRow(block, i);
     }
+
+    // AAOIFI reports "Non-Compliant Assets"; FTSE/MSCI report "Cash".
+    const nonCompliant = values["Non-Compliant Assets"] ?? values["Cash"];
 
     out.push({
       methodology,
-      debtPct: values["Debt"] ?? null,
-      // AAOIFI reports "Non-Compliant Assets"; FTSE/MSCI report "Cash".
-      nonCompliantAssetsPct: values["Non-Compliant Assets"] ?? values["Cash"] ?? null,
-      impureIncomePct: values["Impure Income"] ?? null,
+      debtPct: values["Debt"]?.pct ?? null,
+      debtPass: values["Debt"]?.pass ?? null,
+      nonCompliantAssetsPct: nonCompliant?.pct ?? null,
+      nonCompliantAssetsPass: nonCompliant?.pass ?? null,
+      impureIncomePct: values["Impure Income"]?.pct ?? null,
+      impureIncomePass: values["Impure Income"]?.pass ?? null,
     });
 
     // Skip past the rulebook prose and "Source:" line for this block.

@@ -106,77 +106,104 @@ export default function Page() {
       </header>
 
       {!result && (
-        <section
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragging(false);
-            const file = e.dataTransfer.files?.[0];
-            if (file) void handleFile(file);
-          }}
-          className={`rounded-xl border-2 border-dashed p-10 text-center transition ${
-            dragging
-              ? "border-[var(--color-compliant)] bg-[var(--color-compliant-bg)]"
-              : "border-[var(--color-line)] bg-white"
-          }`}
-        >
-          <p className="text-sm font-medium">Drop your holdings CSV here</p>
-          <p className="mt-1 text-xs text-[var(--color-muted)]">
-            In Wealthsimple: Activity → Reports → Holdings report. The file is read in memory and
-            never stored.
-          </p>
+        <>
+          <section className="mb-6 rounded-xl border border-[var(--color-line)] bg-white p-5">
+            <h2 className="text-sm font-semibold">Where to get your CSV</h2>
+            <p className="mt-1 text-xs text-[var(--color-review)]">
+              Only Wealthsimple exports are supported right now.
+            </p>
+            <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-[var(--color-muted)]">
+              <li>
+                Go to{" "}
+                <a
+                  href="https://my.wealthsimple.com/app/holdings-dashboard"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="font-medium text-[var(--color-ink)] underline"
+                >
+                  my.wealthsimple.com/app/holdings-dashboard
+                </a>{" "}
+                (the Holdings tab in your Wealthsimple account).
+              </li>
+              <li>
+                Click <strong className="text-[var(--color-ink)]">Export</strong> in the top
+                right of that page.
+              </li>
+              <li>Upload the downloaded CSV below, or drag it into the box.</li>
+            </ol>
+          </section>
 
-          <div className="mt-5 flex items-center justify-center gap-3">
-            <label className="cursor-pointer rounded-lg bg-[var(--color-ink)] px-4 py-2 text-sm font-medium text-white hover:opacity-90">
-              Choose file
-              <input
-                type="file"
-                accept=".csv,text/csv"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void handleFile(file);
-                }}
-              />
-            </label>
-            <button
-              onClick={() => void loadSample()}
-              className="rounded-lg border border-[var(--color-line)] bg-white px-4 py-2 text-sm font-medium hover:bg-[#fafbfc]"
-            >
-              Try sample data
-            </button>
-          </div>
+          <section
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              const file = e.dataTransfer.files?.[0];
+              if (file) void handleFile(file);
+            }}
+            className={`rounded-xl border-2 border-dashed p-10 text-center transition ${
+              dragging
+                ? "border-[var(--color-compliant)] bg-[var(--color-compliant-bg)]"
+                : "border-[var(--color-line)] bg-white"
+            }`}
+          >
+            <p className="text-sm font-medium">Drop your holdings CSV here</p>
+            <p className="mt-1 text-xs text-[var(--color-muted)]">
+              The file is read in memory and never stored.
+            </p>
 
-          {brokerage?.configured && (
-            <div className="mt-6 border-t border-[var(--color-line)] pt-5">
-              <p className="text-xs text-[var(--color-muted)]">
-                Or connect a brokerage directly via SnapTrade (Wealthsimple and Questrade).
-              </p>
-              <div className="mt-3 flex items-center justify-center gap-3">
-                {brokerage.connectionUrl && (
-                  <a
-                    href={brokerage.connectionUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
+            <div className="mt-5 flex items-center justify-center gap-3">
+              <label className="cursor-pointer rounded-lg bg-[var(--color-ink)] px-4 py-2 text-sm font-medium text-white hover:opacity-90">
+                Choose file
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handleFile(file);
+                  }}
+                />
+              </label>
+              <button
+                onClick={() => void loadSample()}
+                className="rounded-lg border border-[var(--color-line)] bg-white px-4 py-2 text-sm font-medium hover:bg-[#fafbfc]"
+              >
+                Try sample data
+              </button>
+            </div>
+
+            {brokerage?.configured && (
+              <div className="mt-6 border-t border-[var(--color-line)] pt-5">
+                <p className="text-xs text-[var(--color-muted)]">
+                  Or connect a brokerage directly via SnapTrade (Wealthsimple and Questrade).
+                </p>
+                <div className="mt-3 flex items-center justify-center gap-3">
+                  {brokerage.connectionUrl && (
+                    <a
+                      href={brokerage.connectionUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="rounded-lg border border-[var(--color-line)] bg-white px-4 py-2 text-sm font-medium hover:bg-[#fafbfc]"
+                    >
+                      Link an account
+                    </a>
+                  )}
+                  <button
+                    onClick={() => void importFromBrokerage()}
                     className="rounded-lg border border-[var(--color-line)] bg-white px-4 py-2 text-sm font-medium hover:bg-[#fafbfc]"
                   >
-                    Link an account
-                  </a>
-                )}
-                <button
-                  onClick={() => void importFromBrokerage()}
-                  className="rounded-lg border border-[var(--color-line)] bg-white px-4 py-2 text-sm font-medium hover:bg-[#fafbfc]"
-                >
-                  Import linked holdings
-                </button>
+                    Import linked holdings
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-        </section>
+            )}
+          </section>
+        </>
       )}
 
       {loading && (

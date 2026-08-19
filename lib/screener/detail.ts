@@ -16,18 +16,46 @@ const CACHE_DIR = join(process.cwd(), ".cache", "detail");
 /** Source refreshes roughly quarterly; a week is comfortably conservative. */
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/**
+ * Bumped whenever `ScreenResult`'s shape changes (new/renamed fields). Without
+ * this, a stale cache entry from before such a change is missing fields
+ * entirely — `undefined`, not `null` — and code that checks `=== null` for
+ * "not applicable" silently mis-renders (a ✗ pass mark for every ratio was
+ * caused by exactly this: `debtPass` was `undefined` on disk, so `pass ===
+ * null` was false and `pass ? "✓" : "✗"` treated `undefined` as failing).
+ * Bump this any time ScreenResult's fields change; old entries then just miss
+ * the cache and refetch instead of serving a mismatched shape.
+ */
+const SCHEMA_VERSION = 2;
+
 const memory = new Map<string, ScreenResult>();
 
 function cachePath(slug: string): string {
   return join(CACHE_DIR, `${slug.replace(/[^a-z0-9_-]/gi, "_")}.json`);
 }
 
+/**
+ * Decides whether a raw cache-file payload is still usable. Exported (and
+ * kept pure, no I/O) so the schema-version and TTL invalidation rules are
+ * directly testable without touching the filesystem or network.
+ */
+export function isCacheEntryValid(
+  parsed: { at?: number; schemaVersion?: number } | null | undefined,
+  now: number,
+): boolean {
+  if (!parsed) return false;
+  if (parsed.schemaVersion !== SCHEMA_VERSION) return false;
+  if (typeof parsed.at !== "number") return false;
+  if (now - parsed.at > TTL_MS) return false;
+  return true;
+}
+
 async function readCache(slug: string): Promise<ScreenResult | null> {
   try {
     const raw = await readFile(cachePath(slug), "utf8");
-    const { at, result } = JSON.parse(raw) as { at: number; result: ScreenResult };
-    if (Date.now() - at > TTL_MS) return null;
-    return result;
+    const parsed = JSON.parse(raw) as { at: number; schemaVersion?: number; result: ScreenResult };
+    if (!isCacheEntryValid(parsed, Date.now())) return null;
+    return parsed.result;
   } catch {
     return null;
   }
@@ -36,7 +64,10 @@ async function readCache(slug: string): Promise<ScreenResult | null> {
 async function writeCache(slug: string, result: ScreenResult): Promise<void> {
   try {
     await mkdir(CACHE_DIR, { recursive: true });
-    await writeFile(cachePath(slug), JSON.stringify({ at: Date.now(), result }));
+    await writeFile(
+      cachePath(slug),
+      JSON.stringify({ at: Date.now(), schemaVersion: SCHEMA_VERSION, result }),
+    );
   } catch {
     // A cache write failure must never break a scan.
   }
